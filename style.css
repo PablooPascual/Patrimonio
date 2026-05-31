@@ -97,6 +97,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 .form-row { display: grid; gap: 8px; margin-bottom: 10px; }
 .fr2 { grid-template-columns: 1fr 1fr; }
 .fr3 { grid-template-columns: 1fr 1fr 1fr; }
+.fr4 { grid-template-columns: repeat(4, 1fr); }
 .field { display: flex; flex-direction: column; }
 .field-label { font-size: 9px; letter-spacing: 2px; color: var(--text2); text-transform: uppercase; margin-bottom: 4px; }
 .inp { background: var(--bg); border: 1px solid var(--line); color: var(--text); padding: 8px 10px; border-radius: var(--r); font-family: var(--font); font-size: 11px; width: 100%; outline: none; transition: border-color .2s; -webkit-appearance: none; }
@@ -204,6 +205,8 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
   .summary-grid { grid-template-columns: repeat(2,1fr); }
   .fr3 { grid-template-columns: 1fr 1fr; }
   .fr3 .field:last-child { grid-column: 1/-1; }
+  .fr4 { grid-template-columns: 1fr 1fr; }
+  .fr4 .field:last-child { grid-column: 1/-1; }
   .hist-row { grid-template-columns: 80px 1fr auto; }
   .hist-row .hist-delta { display: none; }
   .net-value { font-size: 22px; }

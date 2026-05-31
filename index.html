@@ -21,7 +21,6 @@
       <span class="logo-main">WEALTHTERM</span>
       <span class="logo-sub">// sistema de patrimonio personal</span>
     </div>
-    <div id="clock" class="clock"></div>
   </header>
 
   <section class="hero">
@@ -161,15 +160,14 @@
           <input class="inp" id="f-name" placeholder="MSCI World, Amundi...">
         </div>
         <div class="field">
-          <label class="field-label" for="f-qty">participaciones</label>
-          <input class="inp" type="number" id="f-qty" placeholder="12.5000" min="0" step="0.0001">
+          <label class="field-label" for="f-init">inversión inicial (€)</label>
+          <input class="inp" type="number" id="f-init" placeholder="1000.00" min="0" step="0.01">
         </div>
         <div class="field">
-          <label class="field-label" for="f-price">precio medio compra (€)</label>
-          <input class="inp" type="number" id="f-price" placeholder="45.20" min="0" step="0.01">
+          <label class="field-label" for="f-pct">ganancia / pérdida (%)</label>
+          <input class="inp" type="number" id="f-pct" placeholder="8.50" step="0.01">
         </div>
       </div>
-      <div class="price-status" id="fond-price-status"></div>
       <button class="btn" id="btn-add-fond">+ añadir fondo</button>
     </div>
     <div id="list-fond"></div>

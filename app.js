@@ -16,6 +16,21 @@ function deepClone(o) {
     : JSON.parse(JSON.stringify(o));
 }
 
+function normalizeFund(item) {
+  const initial = item.initial != null
+    ? Number(item.initial)
+    : Number(item.qty || 0) * Number(item.price || 0);
+  const pct = item.pct != null ? Number(item.pct) : 0;
+  const gain = initial * (pct / 100);
+  return {
+    ...item,
+    name: item.name || item.tick || 'Fondo',
+    initial,
+    pct,
+    currentValue: initial + gain
+  };
+}
+
 /* ══ ESTADO ══════════════════════════════════════════════ */
 const STORAGE_KEY = 'wealthterm_v1';
 const DEFAULT_STATE = { banco: [], inv: [], fond: [], cri: [], snaps: [] };
@@ -30,7 +45,7 @@ function loadState() {
     return {
       banco: Array.isArray(p.banco) ? p.banco : [],
       inv:   Array.isArray(p.inv)   ? p.inv   : [],
-      fond:  Array.isArray(p.fond)  ? p.fond  : [],
+      fond:  Array.isArray(p.fond)  ? p.fond.map(normalizeFund) : [],
       cri:   Array.isArray(p.cri)   ? p.cri   : [],
       snaps: Array.isArray(p.snaps) ? p.snaps : []
     };
@@ -92,7 +107,7 @@ function tots() {
   // Para inv y fond: usa livePrice si existe, si no buyPrice
   const b = S.banco.reduce((a,x) => a + Number(x.bal||0), 0);
   const i = S.inv  .reduce((a,x) => a + Number(x.qty||0) * (x.livePrice ?? Number(x.price||0)), 0);
-  const f = S.fond .reduce((a,x) => a + Number(x.qty||0) * (x.livePrice ?? Number(x.price||0)), 0);
+  const f = S.fond .reduce((a,x) => a + Number(x.initial ?? 0) * (1 + Number(x.pct || 0) / 100), 0);
   const c = S.cri  .reduce((a,x) => a + Number(x.qty||0) * (x.livePrice ?? Number(x.price||0)), 0);
   return { b, i, f, c, t: b+i+f+c };
 }
@@ -100,6 +115,12 @@ function tots() {
 // PnL de un activo individual
 function pnl(item, type) {
   if (type === 'banco') return { gain: 0, pct: 0, hasLive: false };
+  if (type === 'fond') {
+    const initial = Number(item.initial ?? item.qty * item.price ?? 0);
+    const pct = Number(item.pct || 0);
+    const gain = initial * (pct / 100);
+    return { gain, pct, hasLive: true, cost: initial, cur: initial + gain };
+  }
   const qty      = Number(item.qty||0);
   const buyPrice = Number(item.price||0);
   const live     = item.livePrice;
@@ -281,7 +302,6 @@ function startPriceRefresh() {
     const tab = document.querySelector('.tab.active')?.dataset?.tab;
     if (tab === 'cri')  fetchCriptoPrices();
     if (tab === 'inv')  fetchYahooPrices('inv');
-    if (tab === 'fond') fetchYahooPrices('fond');
   }, 60000);
 }
 
@@ -298,7 +318,6 @@ function setTab(name) {
   if (name==='hist')     renderHist();
   if (name==='cri')      fetchCriptoPrices();
   if (name==='inv')      fetchYahooPrices('inv');
-  if (name==='fond')     fetchYahooPrices('fond');
 }
 
 document.getElementById('tabs').addEventListener('click', e => {
@@ -445,31 +464,31 @@ function renderFond() {
   const el = document.getElementById('list-fond');
   if (!S.fond.length) { el.innerHTML='<div class="empty-state">// sin fondos registrados</div>'; return; }
   el.innerHTML = '<div class="asset-list">'+S.fond.map((x,i)=>{
-    const p   = pnl(x,'fond');
-    const val = p.cur ?? Number(x.qty||0)*Number(x.price||0);
+    const item = normalizeFund(x);
+    S.fond[i] = item;
+    const p   = pnl(item,'fond');
+    const val = p.cur;
     return `
     <div class="asset-wrap">
       <div class="asset asset-4col">
         <div>
-          <div class="a-tick" style="color:var(--green)">${esc(x.name||x.tick||'—')}</div>
-          <div class="a-sub">${fmtQty(x.qty,4)} partes · pmedio ${fmt(x.price)}${x.tick?' · ticker: '+esc(x.tick):''}</div>
-          ${livePriceBadge(x)}
+          <div class="a-tick" style="color:var(--green)">${esc(item.name)}</div>
+          <div class="a-sub">inversión inicial ${fmt(item.initial)} · ${item.pct >= 0 ? '+' : ''}${Number(item.pct).toFixed(2)}%</div>
         </div>
-        <div>${pnlBadge(x,'fond')}</div>
+        <div>${pnlBadge(item,'fond')}</div>
         <div class="a-right"><div class="a-val">${fmt(val)}</div></div>
         <div class="a-actions">
-          <button class="btn-icon" data-action="edit-fond" data-idx="${i}" aria-label="Editar ${esc(x.name)}">✎</button>
-          <button class="btn-icon btn-icon-del" data-action="del-fond" data-idx="${i}" aria-label="Eliminar ${esc(x.name)}">✕</button>
+          <button class="btn-icon" data-action="edit-fond" data-idx="${i}" aria-label="Editar ${esc(item.name)}">✎</button>
+          <button class="btn-icon btn-icon-del" data-action="del-fond" data-idx="${i}" aria-label="Eliminar ${esc(item.name)}">✕</button>
         </div>
       </div>
       <div class="edit-panel" id="ep-fond-${i}" style="display:none">
         <div class="form-row fr2">
-          <div class="field"><label class="field-label" for="ef-name-${i}">nombre</label><input class="inp" id="ef-name-${i}" value="${esc(x.name||'')}"></div>
-          <div class="field"><label class="field-label" for="ef-tick-${i}">ticker (Yahoo, ej: IWDA.AS)</label><input class="inp" id="ef-tick-${i}" value="${esc(x.tick||'')}"></div>
+          <div class="field"><label class="field-label" for="ef-name-${i}">nombre</label><input class="inp" id="ef-name-${i}" value="${esc(item.name)}"></div>
+          <div class="field"><label class="field-label" for="ef-init-${i}">inversión inicial (€)</label><input class="inp" type="number" id="ef-init-${i}" value="${item.initial}" step="0.01"></div>
         </div>
         <div class="form-row fr2">
-          <div class="field"><label class="field-label" for="ef-qty-${i}">participaciones</label><input class="inp" type="number" id="ef-qty-${i}" value="${x.qty}" step="0.0001"></div>
-          <div class="field"><label class="field-label" for="ef-price-${i}">precio medio compra (€)</label><input class="inp" type="number" id="ef-price-${i}" value="${x.price}" step="0.01"></div>
+          <div class="field"><label class="field-label" for="ef-pct-${i}">ganancia / pérdida (%)</label><input class="inp" type="number" id="ef-pct-${i}" value="${item.pct}" step="0.01"></div>
         </div>
         <div class="edit-btns">
           <button class="btn btn-save" data-action="save-fond" data-idx="${i}">guardar</button>
@@ -563,14 +582,13 @@ document.getElementById('app').addEventListener('click', e => {
   }
   if (action === 'save-fond') {
     const name  = document.getElementById(`ef-name-${idx}`).value.trim();
-    const tick  = document.getElementById(`ef-tick-${idx}`).value.trim().toUpperCase();
-    const qty   = parseFloat(document.getElementById(`ef-qty-${idx}`).value);
-    const price = parseFloat(document.getElementById(`ef-price-${idx}`).value);
-    if (!name||isNaN(qty)||qty<=0||isNaN(price)||price<=0) { toast('Todos los campos son obligatorios.','error'); return; }
-    S.fond[idx] = { ...S.fond[idx], name, tick:tick||undefined, qty, price, livePrice:undefined, change24h:undefined };
+    const initial = parseFloat(document.getElementById(`ef-init-${idx}`).value);
+    const pct = parseFloat(document.getElementById(`ef-pct-${idx}`).value);
+    if (!name || isNaN(initial) || initial < 0 || isNaN(pct)) { toast('Nombre, inversión inicial y porcentaje válidos.','error'); return; }
+    S.fond[idx] = normalizeFund({ ...S.fond[idx], name, initial, pct });
     save(); renderFond(); updateDash(); maybeRefreshCharts();
     toast('Fondo actualizado', 'success');
-    if (tick) fetchYahooPrices('fond'); return;
+    return;
   }
   if (action === 'save-cri') {
     const tick  = document.getElementById(`ec-tick-${idx}`).value.trim().toUpperCase();
@@ -599,6 +617,7 @@ document.getElementById('app').addEventListener('click', e => {
       toast('Eliminado', 'info');
     });
   }
+  // (fondos ya no usan ticker ni apertura externa)
 });
 
 /* ══ FORMULARIOS AÑADIR ══════════════════════════════════ */
@@ -643,15 +662,15 @@ function addInv() {
 
 function addFond() {
   const name  = document.getElementById('f-name').value.trim();
-  const qty   = parseFloat(document.getElementById('f-qty').value);
-  const price = parseFloat(document.getElementById('f-price').value);
+  const initial = parseFloat(document.getElementById('f-init').value);
+  const pct = parseFloat(document.getElementById('f-pct').value);
   if (!name)                  { flashError('f-name','Introduce el nombre.'); return; }
-  if (isNaN(qty)||qty<=0)     { flashError('f-qty','Participaciones no válidas.'); return; }
-  if (isNaN(price)||price<=0) { flashError('f-price','Precio no válido.'); return; }
-  S.fond.push({ name, qty, price });
-  clearInputs(['f-name','f-qty','f-price']);
+  if (isNaN(initial)||initial<0) { flashError('f-init','Inversión inicial no válida.'); return; }
+  if (isNaN(pct))               { flashError('f-pct','Porcentaje no válido.'); return; }
+  S.fond.push(normalizeFund({ name, initial, pct }));
+  clearInputs(['f-name','f-init','f-pct']);
   save(); renderFond(); updateDash(); maybeRefreshCharts();
-  toast('Fondo añadido — edítalo para añadir ticker de Yahoo Finance', 'info', 5000);
+  toast('Fondo añadido', 'success');
 }
 
 function addCri() {
@@ -681,7 +700,7 @@ document.getElementById('btn-add-cri')  .addEventListener('click', addCri);
 
 ['b-name','b-bal'].forEach(id => document.getElementById(id).addEventListener('keydown', e => { if(e.key==='Enter') addBanco(); }));
 ['i-tick','i-qty','i-price'].forEach(id => document.getElementById(id).addEventListener('keydown', e => { if(e.key==='Enter') addInv(); }));
-['f-name','f-qty','f-price'].forEach(id => document.getElementById(id).addEventListener('keydown', e => { if(e.key==='Enter') addFond(); }));
+['f-name','f-init','f-pct'].forEach(id => document.getElementById(id).addEventListener('keydown', e => { if(e.key==='Enter') addFond(); }));
 ['c-tick','c-qty','c-price'].forEach(id => document.getElementById(id).addEventListener('keydown', e => { if(e.key==='Enter') addCri(); }));
 
 /* ══ HISTORIAL ═══════════════════════════════════════════ */

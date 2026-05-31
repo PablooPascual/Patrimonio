@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WealthTerm</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- TOASTS -->
+  <div id="toast-container" aria-live="polite" aria-atomic="false"></div>
+
+  <header class="header">
+    <div class="logo">
+      <span class="logo-main">WEALTHTERM</span>
+      <span class="logo-sub">// sistema de patrimonio personal</span>
+    </div>
+    <div id="clock" class="clock"></div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-left">
+      <div class="net-label">patrimonio neto total</div>
+      <div class="net-value" id="net-value">€ 0.00</div>
+      <div class="net-delta" id="net-delta" aria-live="polite">guarda una captura para ver evolución</div>
+    </div>
+    <div class="hero-right">
+      <div class="mini-bars" id="mini-bars"></div>
+      <div class="mini-label">historial capturas</div>
+    </div>
+  </section>
+
+  <div class="summary-grid">
+    <div class="scard">
+      <div class="scard-label"><span class="dot dot-b"></span>banco</div>
+      <div class="scard-value" id="s-b">€ 0.00</div>
+      <div class="scard-sub" id="sp-b">—</div>
+    </div>
+    <div class="scard">
+      <div class="scard-label"><span class="dot dot-i"></span>bolsa</div>
+      <div class="scard-value" id="s-i">€ 0.00</div>
+      <div class="scard-sub" id="sp-i">—</div>
+    </div>
+    <div class="scard">
+      <div class="scard-label"><span class="dot dot-f"></span>fondos</div>
+      <div class="scard-value" id="s-f">€ 0.00</div>
+      <div class="scard-sub" id="sp-f">—</div>
+    </div>
+    <div class="scard">
+      <div class="scard-label"><span class="dot dot-c"></span>cripto</div>
+      <div class="scard-value" id="s-c">€ 0.00</div>
+      <div class="scard-sub" id="sp-c">—</div>
+    </div>
+  </div>
+
+  <div class="alloc-section">
+    <div class="alloc-labels">
+      <span id="al-b">Banco 0%</span>
+      <span id="al-i">Bolsa 0%</span>
+      <span id="al-f">Fondos 0%</span>
+      <span id="al-c">Cripto 0%</span>
+    </div>
+    <div class="alloc-bar">
+      <div class="alloc-seg seg-b" id="seg-b"></div>
+      <div class="alloc-seg seg-i" id="seg-i"></div>
+      <div class="alloc-seg seg-f" id="seg-f"></div>
+      <div class="alloc-seg seg-c" id="seg-c"></div>
+    </div>
+  </div>
+
+  <nav class="tabs" id="tabs" role="tablist">
+    <button class="tab active" data-tab="overview" role="tab" aria-selected="true">overview</button>
+    <button class="tab" data-tab="banco"    role="tab" aria-selected="false">banco</button>
+    <button class="tab" data-tab="inv"      role="tab" aria-selected="false">bolsa</button>
+    <button class="tab" data-tab="fond"     role="tab" aria-selected="false">fondos</button>
+    <button class="tab" data-tab="cri"      role="tab" aria-selected="false">cripto</button>
+    <button class="tab" data-tab="hist"     role="tab" aria-selected="false">historial</button>
+  </nav>
+
+  <!-- OVERVIEW -->
+  <div id="pane-overview" class="pane active" role="tabpanel">
+    <div class="card">
+      <div class="card-hdr">evolución del patrimonio</div>
+      <div class="chart-legend">
+        <span class="leg-item"><span class="leg-dot" style="background:#3b82f6"></span>total</span>
+        <span class="leg-item"><span class="leg-dot" style="background:#8b5cf6"></span>bolsa</span>
+        <span class="leg-item"><span class="leg-dot" style="background:#10b981"></span>fondos</span>
+        <span class="leg-item"><span class="leg-dot" style="background:#f59e0b"></span>cripto</span>
+      </div>
+      <div class="chart-wrap" style="height:200px">
+        <canvas id="ch-evo" role="img" aria-label="Gráfica de evolución del patrimonio total y por categoría"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-hdr">distribución actual</div>
+      <div class="pie-row">
+        <div class="chart-wrap" style="height:160px;width:160px;flex-shrink:0">
+          <canvas id="ch-pie" role="img" aria-label="Distribución del patrimonio por categoría"></canvas>
+        </div>
+        <div id="pie-legend" class="pie-legend"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BANCO -->
+  <div id="pane-banco" class="pane" role="tabpanel">
+    <div class="card">
+      <div class="card-hdr">+ añadir cuenta bancaria</div>
+      <div class="form-row fr2">
+        <div class="field">
+          <label class="field-label" for="b-name">nombre</label>
+          <input class="inp" id="b-name" placeholder="ING, Revolut, BBVA...">
+        </div>
+        <div class="field">
+          <label class="field-label" for="b-bal">saldo actual (€)</label>
+          <input class="inp" type="number" id="b-bal" placeholder="0.00" min="0" step="0.01">
+        </div>
+      </div>
+      <button class="btn" id="btn-add-banco">+ añadir banco</button>
+    </div>
+    <div id="list-banco"></div>
+  </div>
+
+  <!-- BOLSA -->
+  <div id="pane-inv" class="pane" role="tabpanel">
+    <div class="card">
+      <div class="card-hdr">+ añadir acción / ETF</div>
+      <div class="form-row fr3">
+        <div class="field">
+          <label class="field-label" for="i-tick">ticker</label>
+          <input class="inp" id="i-tick" placeholder="AAPL, SAN.MC, VWCE.DE...">
+        </div>
+        <div class="field">
+          <label class="field-label" for="i-qty">cantidad de acciones</label>
+          <input class="inp" type="number" id="i-qty" placeholder="10" min="0" step="0.0001">
+        </div>
+        <div class="field">
+          <label class="field-label" for="i-price">precio medio compra (€)</label>
+          <input class="inp" type="number" id="i-price" placeholder="150.00" min="0" step="0.01">
+        </div>
+      </div>
+      <div class="price-status" id="inv-price-status"></div>
+      <button class="btn" id="btn-add-inv">+ añadir posición</button>
+    </div>
+    <div id="list-inv"></div>
+  </div>
+
+  <!-- FONDOS -->
+  <div id="pane-fond" class="pane" role="tabpanel">
+    <div class="card">
+      <div class="card-hdr">+ añadir fondo indexado / monetario</div>
+      <div class="form-row fr3">
+        <div class="field">
+          <label class="field-label" for="f-name">nombre del fondo</label>
+          <input class="inp" id="f-name" placeholder="MSCI World, Amundi...">
+        </div>
+        <div class="field">
+          <label class="field-label" for="f-qty">participaciones</label>
+          <input class="inp" type="number" id="f-qty" placeholder="12.5000" min="0" step="0.0001">
+        </div>
+        <div class="field">
+          <label class="field-label" for="f-price">precio medio compra (€)</label>
+          <input class="inp" type="number" id="f-price" placeholder="45.20" min="0" step="0.01">
+        </div>
+      </div>
+      <div class="price-status" id="fond-price-status"></div>
+      <button class="btn" id="btn-add-fond">+ añadir fondo</button>
+    </div>
+    <div id="list-fond"></div>
+  </div>
+
+  <!-- CRIPTO -->
+  <div id="pane-cri" class="pane" role="tabpanel">
+    <div class="card">
+      <div class="card-hdr">+ añadir criptomoneda</div>
+      <div class="form-row fr3">
+        <div class="field">
+          <label class="field-label" for="c-tick">ticker</label>
+          <input class="inp" id="c-tick" placeholder="BTC, ETH, SOL...">
+        </div>
+        <div class="field">
+          <label class="field-label" for="c-qty">cantidad</label>
+          <input class="inp" type="number" id="c-qty" placeholder="0.05" min="0" step="0.00000001">
+        </div>
+        <div class="field">
+          <label class="field-label" for="c-price">precio medio compra (€)</label>
+          <input class="inp" type="number" id="c-price" placeholder="28000.00" min="0" step="0.01">
+        </div>
+      </div>
+      <div class="price-status" id="cri-price-status"></div>
+      <button class="btn" id="btn-add-cri">+ añadir cripto</button>
+    </div>
+    <div id="list-cri"></div>
+  </div>
+
+  <!-- HISTORIAL -->
+  <div id="pane-hist" class="pane" role="tabpanel">
+    <div class="card">
+      <div class="card-hdr">captura de patrimonio</div>
+      <p class="snap-note">
+        No necesitas registrar ingresos ni gastos diarios. Guarda una "foto" cuando quieras
+        — cada semana, mes o trimestre — y el sistema traza tu evolución automáticamente.
+      </p>
+      <div class="hist-actions">
+        <button class="btn btn-snap"   id="btn-snap">📸 guardar captura ahora</button>
+        <button class="btn btn-export" id="btn-export">⬇ exportar JSON</button>
+        <button class="btn btn-export" id="btn-export-csv">⬇ exportar CSV</button>
+        <label  class="btn btn-import" for="import-file">⬆ importar datos</label>
+        <input type="file" id="import-file" accept=".json" style="display:none">
+      </div>
+    </div>
+    <div id="hist-card" class="card" style="display:none">
+      <div class="card-hdr">registro histórico <span id="snap-count" class="badge"></span></div>
+      <div id="hist-list" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <!-- Modal confirmación -->
+  <div id="modal-confirm" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-msg" style="display:none">
+    <div class="modal-box">
+      <p id="modal-msg" class="modal-msg-text"></p>
+      <div class="modal-btns">
+        <button class="btn btn-danger" id="modal-ok">Eliminar</button>
+        <button class="btn btn-ghost"  id="modal-cancel">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

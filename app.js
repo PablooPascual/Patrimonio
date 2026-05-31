@@ -790,7 +790,26 @@ setInterval(updateClock, 1000);
 updateClock();
 
 /* ══ ARRANQUE ════════════════════════════════════════════ */
-renderBanco(); renderInv(); renderFond(); renderCri();
-updateDash();
-setTimeout(initCharts, 200);
-startPriceRefresh();
+function boot() {
+  renderBanco();
+  renderInv();
+  renderFond();
+  renderCri();
+  updateDash();
+  setTimeout(initCharts, 200);
+  startPriceRefresh();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', boot, { once: true });
+} else {
+  requestAnimationFrame(boot);
+}
+
+window.addEventListener('pageshow', () => {
+  renderBanco();
+  renderInv();
+  renderFond();
+  renderCri();
+  updateDash();
+});

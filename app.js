@@ -36,7 +36,8 @@ const STORAGE_KEY = 'wealthterm_v1';
 const PRIVACY_KEY = 'wealthterm_privacy_hidden';
 const DEFAULT_STATE = { banco: [], inv: [], fond: [], cri: [], snaps: [] };
 
-let S = loadState();
+// Inicializar con estado por defecto y forzar hidratación en boot
+let S = deepClone(DEFAULT_STATE);
 let privacyHidden = loadPrivacyMode();
 
 function normalizeState(state) {
@@ -60,9 +61,12 @@ function normalizeState(state) {
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
+    console.debug('[wealterm] loadState raw:', raw ? (raw.length + ' bytes') : null);
     if (!raw) return deepClone(DEFAULT_STATE);
     const p = JSON.parse(raw);
-    return normalizeState(p);
+    const ns = normalizeState(p);
+    console.debug('[wealterm] normalized state counts:', { banco: ns.banco.length, inv: ns.inv.length, fond: ns.fond.length, cri: ns.cri.length, snaps: ns.snaps.length });
+    return ns;
   } catch(e) { console.error(e); return deepClone(DEFAULT_STATE); }
 }
 
@@ -104,6 +108,15 @@ function togglePrivacyMode() {
 function save() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(S)); }
   catch(e) { console.error('LocalStorage error:', e); }
+}
+
+// Helper debug: muestra un toast con conteos al arrancar (se puede quitar)
+function debugShowCounts() {
+  try {
+    const c = { banco: S.banco.length, inv: S.inv.length, fond: S.fond.length, cri: S.cri.length };
+    toast(`estado cargado: banco ${c.banco}, bolsa ${c.inv}, fondos ${c.fond}, cripto ${c.cri}`, 'info', 5000);
+    console.debug('[wealterm] estado cargado', c);
+  } catch(e) { console.warn('debugShowCounts error', e); }
 }
 
 /* ══ FORMATO ═════════════════════════════════════════════ */
@@ -851,6 +864,8 @@ function boot() {
   updateDash();
   setTimeout(initCharts, 200);
   startPriceRefresh();
+  // Mostrar conteos para depuración en caliente
+  debugShowCounts();
 }
 
 if (document.readyState === 'loading') {

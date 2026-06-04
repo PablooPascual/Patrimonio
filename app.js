@@ -33,23 +33,72 @@ function normalizeFund(item) {
 
 /* ══ ESTADO ══════════════════════════════════════════════ */
 const STORAGE_KEY = 'wealthterm_v1';
+const PRIVACY_KEY = 'wealthterm_privacy_hidden';
 const DEFAULT_STATE = { banco: [], inv: [], fond: [], cri: [], snaps: [] };
 
 let S = loadState();
+let privacyHidden = loadPrivacyMode();
+
+function normalizeState(state) {
+  return {
+    banco: Array.isArray(state.banco)
+      ? state.banco.map(x => ({ name: String(x.name || ''), bal: Number(x.bal || 0) }))
+      : [],
+    inv: Array.isArray(state.inv)
+      ? state.inv.map(x => ({ ...x, tick: String(x.tick || '').toUpperCase(), qty: Number(x.qty || 0), price: Number(x.price || 0) }))
+      : [],
+    fond: Array.isArray(state.fond)
+      ? state.fond.map(normalizeFund)
+      : [],
+    cri: Array.isArray(state.cri)
+      ? state.cri.map(x => ({ ...x, tick: String(x.tick || '').toUpperCase(), qty: Number(x.qty || 0), price: Number(x.price || 0) }))
+      : [],
+    snaps: Array.isArray(state.snaps) ? state.snaps : []
+  };
+}
 
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return deepClone(DEFAULT_STATE);
     const p = JSON.parse(raw);
-    return {
-      banco: Array.isArray(p.banco) ? p.banco : [],
-      inv:   Array.isArray(p.inv)   ? p.inv   : [],
-      fond:  Array.isArray(p.fond)  ? p.fond.map(normalizeFund) : [],
-      cri:   Array.isArray(p.cri)   ? p.cri   : [],
-      snaps: Array.isArray(p.snaps) ? p.snaps : []
-    };
+    return normalizeState(p);
   } catch(e) { console.error(e); return deepClone(DEFAULT_STATE); }
+}
+
+function hydrateStateFromStorage() {
+  S = loadState();
+  return S;
+}
+
+function loadPrivacyMode() {
+  try {
+    const raw = localStorage.getItem(PRIVACY_KEY);
+    return raw == null ? true : raw === '1';
+  } catch (e) {
+    return true;
+  }
+}
+
+function savePrivacyMode(hidden) {
+  privacyHidden = !!hidden;
+  try { localStorage.setItem(PRIVACY_KEY, privacyHidden ? '1' : '0'); }
+  catch (e) { console.error('Privacy storage error:', e); }
+}
+
+function applyPrivacyMode() {
+  document.body.classList.toggle('privacy-hidden', privacyHidden);
+  const btn = document.getElementById('privacy-toggle');
+  if (btn) {
+    btn.textContent = privacyHidden ? 'mostrar datos' : 'ocultar datos';
+    btn.setAttribute('aria-pressed', String(!privacyHidden));
+  }
+}
+
+function togglePrivacyMode() {
+  savePrivacyMode(!privacyHidden);
+  applyPrivacyMode();
+  toast(privacyHidden ? 'Datos ocultos' : 'Datos visibles', 'info');
 }
 
 function save() {
@@ -101,6 +150,8 @@ document.getElementById('modal-cancel').addEventListener('click', () => {
 document.getElementById('modal-confirm').addEventListener('click', e => {
   if (e.target === e.currentTarget) { document.getElementById('modal-confirm').style.display = 'none'; _confirmCb = null; }
 });
+
+document.getElementById('privacy-toggle').addEventListener('click', togglePrivacyMode);
 
 /* ══ TOTALES ═════════════════════════════════════════════ */
 function tots() {
@@ -771,7 +822,7 @@ document.getElementById('import-file').addEventListener('change', e => {
     try {
       const data=JSON.parse(ev.target.result);
       if (!data||typeof data!=='object') throw new Error('JSON no válido');
-      S={ banco:Array.isArray(data.banco)?data.banco:[], inv:Array.isArray(data.inv)?data.inv:[], fond:Array.isArray(data.fond)?data.fond:[], cri:Array.isArray(data.cri)?data.cri:[], snaps:Array.isArray(data.snaps)?data.snaps:[] };
+      S=normalizeState(data);
       save(); renderBanco(); renderInv(); renderFond(); renderCri(); updateDash(); renderHist(); maybeRefreshCharts();
       toast('Datos importados correctamente','success');
     } catch(err) { toast('Error al importar: '+err.message,'error',5000); }
@@ -791,6 +842,8 @@ updateClock();
 
 /* ══ ARRANQUE ════════════════════════════════════════════ */
 function boot() {
+  hydrateStateFromStorage();
+  applyPrivacyMode();
   renderBanco();
   renderInv();
   renderFond();
@@ -807,9 +860,25 @@ if (document.readyState === 'loading') {
 }
 
 window.addEventListener('pageshow', () => {
+  hydrateStateFromStorage();
+  applyPrivacyMode();
   renderBanco();
   renderInv();
   renderFond();
   renderCri();
   updateDash();
+});
+
+window.addEventListener('focus', () => {
+  hydrateStateFromStorage();
+  applyPrivacyMode();
+  renderBanco();
+  renderInv();
+  renderFond();
+  renderCri();
+  updateDash();
+});
+
+window.addEventListener('beforeunload', () => {
+  savePrivacyMode(true);
 });

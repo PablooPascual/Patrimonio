@@ -43,10 +43,21 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 .toast-info    { border-color: var(--blue);  color: var(--blue);  }
 
 /* ══ Header ══════════════════════════════════════════════ */
-.header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
 .logo-main { display: block; font-size: 18px; font-weight: 700; color: var(--blue); letter-spacing: 3px; }
 .logo-sub  { display: block; font-size: 9px; color: var(--text3); letter-spacing: 4px; margin-top: 2px; font-weight: 300; }
 .clock { font-size: 9px; color: var(--text2); text-align: right; line-height: 1.7; }
+.btn-privacy { background: transparent; border: 1px solid var(--line); color: var(--text); }
+.btn-privacy:hover { border-color: var(--blue); color: var(--blue); }
+
+/* ══ Modo privacidad ═════════════════════════════════════ */
+body.privacy-hidden #app > :not(.header):not(#toast-container) {
+  filter: blur(14px) saturate(0.8);
+  opacity: 0.16;
+  pointer-events: none;
+  user-select: none;
+}
+body.privacy-hidden .toast { display: none; }
 
 /* ══ Hero ════════════════════════════════════════════════ */
 .hero { background: var(--bg2); border: 1px solid var(--line); border-radius: var(--rl); padding: 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; }
